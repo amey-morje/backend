@@ -77,4 +77,173 @@ postRouter.route('/:postId')
     .catch((err) => next(err));
 });
 
+postRouter.route('/:postId/comments')
+.get((req, res, next) => {
+    Posts.findById(req.params.postId)
+    // .populate('comments.author')
+    .then((post) => {
+        if( post != null){
+            res.statusCode = 200;
+            res.setHeader('Content-Type', 'application/json');
+            res.json(post.comments);
+        }
+        else {
+            err = new Error('Post ' + req.params.postId + ' not found');
+            err.status = 404;
+            return next(err);
+        }
+    }, (err) => next(err))
+    .catch((err) => next(err));
+})
+.post((req, res, next) => {
+    Posts.findById(req.params.postId)
+    .then((post) => {
+        if(post !=  null) {
+            post.comments.push(req.body);
+            post.save()
+            .then((post) => {
+                Posts.findById(post._id)
+                .then((post) => {
+                    res.statusCode = 200;
+                    res.setHeader('Content-Type', 'application/json');
+                    res.json(post);
+                })
+            }, (err) => next (err));
+        }
+        else {
+            err = new Error('Post ' + req.params.postId + ' not found');
+            err.status = 404;
+            return next(err);
+        }
+    }, (err) => next(err))
+    .catch((err) => next(err));
+})
+.put((req, res, next) => {
+    res.statusCode = 403;
+    res.end('PUT operation not supported for /posts/' + req.params.postId + '/comments');
+})
+.delete((req, res, next) => {
+    Posts.findById(req.params.postId)
+    .then((post) => {
+        if(post != null) {
+            for(var i = (post.comments.length -1); i >= 0; i--) {
+                post.comments.id(post.comments[i]._id).remove();
+            }
+            post.save()
+            .then((post) => {
+                res.statusCode = 200;
+                res.setHeader('Content-Type', 'application/json');
+                res.json(post);
+            }, (err) => next(err));
+        }
+        else {
+            err = new Error('Post ' + req.params.postId + ' not found');
+            err.status = 404;
+            return next(err);
+        }
+    }, (err) => next (err))
+    .catch((err) => next(err));
+});
+
+postRouter.route('/:postId/comments/:commentId')
+.get((req, res, next) => {
+    Posts.findById(req.params.postId)
+    .then((post) => {
+        if(post != null && post.comments.id(req.params.commentId) != null) {
+            res.statusCode = 200;
+            res.setHeader('Content-Type', 'application/json');
+            res.json(post.comments.id(req.params.commentId));
+        }
+        else if(post == null) {
+            err = new Error('Post ' + req.params.postId + ' not found');
+            err.status = 404;
+            return nedxt(err);
+        }
+        else {
+            err = new Error('Comment ' + req.params.commentId + ' not found');
+            res.status = 404;
+            return next(err);
+        }
+    }, (err) => next(err))
+    .catch((err) => next(err));
+})
+.post((req, res, next) => {
+    res.statusCode = 403;
+    res.end('POST operation not supported on /posts/' + req.params.postId + '/comments/' + req.params.commentId);
+})
+.put((req, res, next) => {
+    Posts.findById(req.params.postId)
+    .then((post) => {
+        if(post != null && post.comments.id(req.params.commentId) != null){
+            // var Id1 = req.user._id.toString();
+            // var Id2 = post.comments.id(req.params.commentId).author.toString();
+            // if(Id1 != Id2) {
+            //     var err = new Error('You are not authorized to manipulate this comment');
+            //     err.status = 403;
+            //     return next(err);
+            // }
+            if(req.body.comment) {
+                post.comments.id(req.params.commentId).commment = req.body.comment;
+            }
+            post.save()
+            .then((post) => {
+                Posts.findById(post._id)
+                // .populate('comments.author')
+                .then((post) => {
+                    res.statusCode = 200;
+                    res.setHeader('Content-Type', 'application/json');
+                    res.json(post);
+                })
+            }, (err) => next(err));
+        }
+        else if (post == null) {
+            err = new Error('Post ' + req.params.postId + ' not found');
+            err.status = 404;
+            return next(err);
+        }
+        else {
+            err = new Error('Comment ' + req.params.commentId + ' not found');
+            err.status = 404;
+            return next(err);
+        }
+    }, (err) => next(err))
+    .catch((err) => next(err));
+})
+.delete((req, res, next) => {
+    Posts.findById(req.params.postId)
+    .then((post) => {
+        if (post != null && post.comments.id(req.params.commentId) != null) {
+            // var Id1 = req.user._id.toString();
+            // var Id2 = post.comments.id(req.params.commentId).author.toString();
+            // if(Id1 != Id2){
+            //     var err = new Error('You are not authorized to delete this comment');
+            //     err.status = 403;
+            //     return next(err);
+            // }
+            post.comments.id(req.params.commentId).remove();
+            post.save()
+            .then((post) => {
+                Posts.findById(post._id)
+                // .populate('comments.author')
+                .then((post) => {
+                    res.statusCode = 200;
+                    res.setHeader('Content-Type', 'application/json');
+                    res.json(post);  
+                })               
+            }, (err) => next(err));
+        }
+        else if (post == null) {
+            err = new Error('Post ' + req.params.postId + ' not found');
+            err.status = 404;
+            return next(err);
+        }
+        else {
+            err = new Error('Comment ' + req.params.commentId + ' not found');
+            err.status = 404;
+            return next(err);            
+        }
+    }, (err) => next(err))
+    .catch((err) => next(err));
+});
+
 module.exports = postRouter;
