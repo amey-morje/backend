@@ -156,8 +156,8 @@ postRouter.route('/:postId/comments/:commentId')
         }
         else if(post == null) {
             err = new Error('Post ' + req.params.postId + ' not found');
-            err.status = 404;
-            return nedxt(err);
+            res.status = 404;
+            return next(err);
         }
         else {
             err = new Error('Comment ' + req.params.commentId + ' not found');
@@ -183,7 +183,7 @@ postRouter.route('/:postId/comments/:commentId')
             //     return next(err);
             // }
             if(req.body.comment) {
-                post.comments.id(req.params.commentId).commment = req.body.comment;
+                post.comments.id(req.params.commentId).comment = req.body.comment;
             }
             post.save()
             .then((post) => {
@@ -239,6 +239,142 @@ postRouter.route('/:postId/comments/:commentId')
         }
         else {
             err = new Error('Comment ' + req.params.commentId + ' not found');
+            err.status = 404;
+            return next(err);            
+        }
+    }, (err) => next(err))
+    .catch((err) => next(err));
+});
+
+postRouter.route('/:postId/likes')
+.get((req, res, next) => {
+    Posts.findById(req.params.postId)
+    // .populate('likes.liked_by')
+    .then((post) => {
+        if(post != null) {
+            res.statusCode = 200;
+            res.setHeader('Content-Type', 'application/json');
+            res.json(post.likes);
+        }
+        else {
+            err = new Error('Post ' + req.params.postId + ' not foumd');
+            err.status = 400;
+            return next(err);
+        }
+    }, (err) => next(err))
+    .catch((err) => next(err));
+})
+.post((req, res, next) => {
+    Posts.findById(req.params.postId)
+    .then((post) => {
+        if(post != null) {
+            post.likes.push(req.body);
+            post.save()
+            .then((post) => {
+                Posts.findById(post._id)
+                .then((post) => {
+                    res.statusCode = 200;
+                    res.setHeader('Content-Type', 'application/json');
+                    res.json(post);
+                })
+            }, (err) => next(err));
+        }
+        else {
+            err = new Error('Post ' + req.params.postId + ' not found');
+            err.status = 404;
+            return next(err);
+        }
+    }, (err) => next(err))
+    .catch((err) => next(err));
+})
+.put((req, res, next) => {
+    res.statusCode = 403;
+    res.end('PUT operation not supported for /posts/' + req.params.postId + '/likes');
+})
+.delete((req, res, next) => {
+    Posts.findById(req.params.postId)
+    .then((post) => {
+        if(post != null) {
+            for(var i = (post.likes.length - 1); i>=0; i--) {
+                post.likes.id(post.likes[i]._id).remove();           
+            }
+            post.save()
+            .then((post) => {
+                res.statusCode = 200;
+                res.setHeader('Content-Type', 'application/json');
+                res.json(post);
+            }, (err) => next(err));
+        }
+        else {
+            err = new Error('Post ' + req.params.postId + ' not found');
+            err.status = 404;
+            return next(err);
+        }
+        
+    }, (err) => next(err))
+    .catch((err) => next(err));
+});
+
+postRouter.route('/:postId/likes/:likeId')
+.get((req, res, next) => {
+    Posts.findById(req.params.postId)
+    .then((post) => {
+        if(post != null && post.likes.id(req.params.likeId) != null) {
+            res.statusCode = 200;
+            res.setHeader('Content-Type', 'application/json');
+            res.json(post.likes.id(req.params.likeId));
+        }
+        else if(post == null) {
+            err = new Error('Post ' + req.params.postId + ' not found');
+            err.status = 404;
+            return next(err);
+        }
+        else {
+            err = new Error('Like ' + req.params.likeId + ' not found');
+            res.status = 404;
+            return next(err);
+        }
+    },(err) => next(err))
+    .catch((err) => next (err));
+})
+.post((req, res, next) => {
+    res.statusCode = 403;
+    res.end('POST operation not supported on /posts/' + req.params.postId + '/likes/' + req.params.likeId);
+}) 
+.put((req, res, next) => {
+    res.statusCode = 403;
+    res.end('PUT operation not supported on /posts/' + req.params.postId + '/likes/' + req.params.likeId);
+})
+.delete((req, res, next) => {
+    Posts.findById(req.params.postId)
+    .then((post) => {
+        if (post != null && post.likes.id(req.params.likeId) != null) {
+            // var Id1 = req.user._id.toString();
+            // var Id2 = post.comments.id(req.params.commentId).author.toString();
+            // if(Id1 != Id2){
+            //     var err = new Error('You are not authorized to delete this comment');
+            //     err.status = 403;
+            //     return next(err);
+            // }
+            post.likes.id(req.params.likeId).remove();
+            post.save()
+            .then((post) => {
+                Posts.findById(post._id)
+                // .populate('comments.author')
+                .then((post) => {
+                    res.statusCode = 200;
+                    res.setHeader('Content-Type', 'application/json');
+                    res.json(post);  
+                })               
+            }, (err) => next(err));
+        }
+        else if (post == null) {
+            err = new Error('Post ' + req.params.postId + ' not found');
+            err.status = 404;
+            return next(err);
+        }
+        else {
+            err = new Error('Like ' + req.params.likeId + ' not found');
             err.status = 404;
             return next(err);            
         }
